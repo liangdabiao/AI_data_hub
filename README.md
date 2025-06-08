@@ -1,164 +1,139 @@
-   <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
-   
+  # AI_data_hub
+  
+  AI项目适用的数据中心，功能：Ingestion（数据摄取） Transform（数据加工） Explore（探索分析） Retrieve（查询检索）。
+  尽可能整合流行有用的数据库和AI数据功能，方便AI数据项目的开发：
+  整合各种数据库：mongo_db，postgres_db /Supabase, mysql , Chroma/Milvus, 
+  整合langchain,langragh. 
+  整合图片多模态/图片搜索 ，ALIYUN_OSS。
+  整合RAG和基础agent。
+  整合爬虫功能.
+  整合FastAPI
+  
+  
+#  安装指南
 
-# Stock Data Insights Application
+1. 把data.env-dev 改为 .dev , 配置好参数秘钥：
 
-This project demonstrates the use of Agentic Retrieval-Augmented Generation (RAG) workflows to extract insights from news and financial data pertaining to specific companies and the broader stock market. It leverages Large Language Models (LLMs), ChromaDB as a vector database, LangChain, LangChain Expression Language (LCEL), and LangGraph to provide comprehensive analyses.
+```
+AI Service APIs: OPENAI_API_KEY, OPENAI_MODEL, TAVILY_API_KEY
+Database Connections: MONGO_URI, POSTGRES_USERNAME, POSTGRES_PASSWORD
+Cloud Storage: ALIYUN_OSS_ACCESS_KEY_ID, ALIYUN_OSS_BUCKET_NAME
+Web Scraping: XHS_AUTH_TOKEN, GZH_AUTH_TOKEN, SCRAPING_INTERVAL
+```
+2. 安装数据库环境：
+```
+Python conda环境： 
+https://zhuanlan.zhihu.com/p/22678445 , 选择Python 3.10
+conda active env_310
 
-## Features
+docker环境：
+安装Postgres：
+docker run --name my-postgres -e POSTGRES_USER=myuser -e POSTGRES_PASSWORD=mypassword -e POSTGRES_DB=mydatabase -p 5432:5432 -d postgres
+安装Mongo：
+docker run -d   --name mongodb  -p 27017:27017   mongo
+安装Chroma：
+conda install chromadb
+docker run -d   --name chroma   -p 8000:8000   -v chroma-data:/data   chromadb/chroma
+```
+2.1 chroma安装成功调试：
+```
+Python ：
+import chromadb
+client = chromadb.PersistentClient(path="VECTOR_DB_DIRECTORY")
+collection = client.get_collection("VECTOR_DB_COLLECTION")
+print(collection.count())
+print(collection.get())
+```
 
-- **Stock Performance Visualization**: Displays graphs and charts illustrating the historical performance of selected stocks.
-- **Attribute-Specific Data Retrieval**: Fetches detailed information related to specific attributes of a particular stock.
-- **News Aggregation**: Presents general news or topic-specific articles related to a particular stock or company.
+3. 安装依赖：
+```
+pip install -r requirements.txt
+```
+4. 启动服务：
+```
+python rest_api/main.py
 
-## High Level Architecture
+测试服务：
+
+(env_310) D:\AI_data_hub>python -m  rag_graphs.gzh_rag_graph.ingestion  #测试rag
+
+(env_310) D:\AI_data_hub>python -m scraper.xhs_scraper #测试爬虫
+``` 
+
+
+5. 访问：
+```
+http://localhost:8000
+``` 
+
+## ingestion（数据摄取） 
+1. 该系统集成了多个用于 AI 处理的外部 API
+```
+OpenAI 集成 ：通过 OPENAI_BASE_URL https://openai.api2d.net/v1 使用 gpt-4.1-mini 模型
+Tavily Search：通过 TAVILY_API_KEY 提供搜索功能
+LangSmith Tracing：使用 ENABLE_LANGSMITH 配置的可选监控
+
+```
+2. 网页抓取和数据收集
+```
+小红书 （XHS）：取用tikhub.io第三方数据服务， 通过 XHS_AUTH_TOKEN 进行身份验证，可配置的页面限制 ，采集小红书相关丰富的数据
+GZH 平台 ：取用tikhub.io第三方数据服务，通过 GZH_AUTH_TOKEN、可配置的页面限制进行身份验证，采集GZH平台相关丰富的数据
+其他各大社交媒体和重要数据可以通过tikhub.io第三方数据服务进行采集
+```
+
+2.1. 采集的渠道小红书数据流程：
+![Class Diagram](images/微信截图_20250609073454.png)
+
+3. 阿里云 OSS 集成提供了对象存储能力：
+
+
+ 
+
+## Transform（数据加工） 
+
+
+采集的各渠道数据，从非结构化到结构化，进行数据清洗和转换，以确保数据的准确性和一致性。
+例如：python -m  rag_graphs.gzh_rag_graph.ingestion
+把文章内容通过向量数据库保存，进一步提供给AI使用RAG功能。
+
 ![High Level Design](documentation/high_level_design.png)
 
-## Approach
+## Explore（探索分析） 
 
-### Asynchronous Scraping
-
-1. **News Data**: Asynchronously scrapes news data for a predefined set of stocks at regular intervals, storing the information in MongoDB. The documents are synchronized with ChromaDB to enable LLMs to perform semantic searches, facilitating the retrieval of relevant information specific to a particular stock or company.
-2. **Financial Data**: Asynchronously scrapes financial data for selected stocks at regular intervals, storing the information in PostgreSQL.
-
-### LangGraph Workflows
-
-#### News Data RAG Graph
-An Agentic RAG Graph designed to search news data for a stock either in the vector database (synced documents from MongoDB) or perform a web search if relevant documents are not found.
-
-![News RAG Graph](images/news-rag-graph.png)
-
-This graph comprises the following nodes:
-
-- **Retrieve News from DB (`retrieve_news`)**: Utilizes LLMs, LangChain, and a Retriever Tool to perform semantic searches in the vector database for documents related to a specific stock topic.
-- **Grade Documents (`grade_documents`)**: Evaluates the quality of documents retrieved in the previous step, assigning a score to determine their relevance. A conditional edge decides whether to generate results or perform an additional web search if the documents are not pertinent.
-- **Web Search (`web_search`)**: Conducts a web search using TavilySearch tooling integrated with LangChain and LLM calls.
-- **Generate Results (`generate_results`)**: Produces results based on the user query and the documents retrieved in prior steps.
-
-#### Stock Data RAG Graph
-
-![News RAG Graph](images/stock-data-rag-graph.png)
-
-An Agentic RAG Graph that searches financial data for a stock in the SQL database (PostgreSQL).
-
-This graph includes the following nodes:
-
-- **Generate SQL (`generate_sql`)**: Employs LLMs and LangChain to generate an SQL query based on user input.
-- **Execute SQL (`execute_sql`)**: Executes the SQL query generated in the previous step to fetch data from the database.
-- **Generate Results (`generate_results`)**: Utilizes LLMs to generate results according to the user query and the data retrieved in the preceding step.
-
-#### Stock Data Charts RAG Graph
-
-![News RAG Graph](images/stock-charts-rag-graph.png)
-
-An Agentic RAG Graph that retrieves financial data for a stock from the SQL database (PostgreSQL) and generates visual charts.
-
-This graph consists of the following nodes:
-
-- **Generate SQL (`generate_sql`)**: Uses LLMs and LangChain to create an SQL query based on user input.
-- **Execute SQL (`execute_sql`)**: Runs the SQL query generated earlier to fetch data from the database.
-
-## APIs
-For detailed API specifications, refer to the attached `openapi.json` file.
-
-
-### Price Stats (GET `/stock/{ticker}/price-stats`)
-
-Get stock price statistics for a specific ticker.
-
-Args:
-    ticker (str): Stock ticker symbol.
-    operation (str): Operation to perform (e.g., 'highest', 'lowest', 'average').
-    price_type (str): Type of price (e.g., 'open', 'close', 'low', 'high').
-    duration (int): Number of days
-
-Returns:
-    dict: Stock data with the requested statistics.
-
-#### Parameters:
-- `ticker`: string - Stock ticker symbol
-- `operation`: string - Operation to perform: 'highest', 'lowest', 'average'
-- `price_type`: string - Price type: 'open', 'close', 'low', 'high'
-- `duration`: string - Duration (days): '1', '7', '14', '30'
-
-### Chart (GET `/stock/{ticker}/chart`)
-
-Get stock price statistics and return a histogram/chart for a specific ticker.
-
-Args:
-    ticker (str): Stock ticker symbol.
-    price_type (str): Type of price (e.g., 'open', 'close', 'low', 'high').
-    duration (int): Number of days
-
-Returns:
-    dict: Stock data with the requested statistics.
-
-#### Parameters:
-- `ticker`: string - Stock ticker symbol
-- `price_type`: string - Price type: 'open', 'close', 'low', 'high'
-- `duration`: string - Duration (days): '1', '7', '14', '30'
-
-### News By Topic (GET `/news/{ticker}`)
-
-Get news a specific ticker.
-
-Args:
-    ticker (str): Stock ticker symbol.
-    topic (str): Topic to fetch news for a specific stock.
-
-Returns:
-    dict: Relevant news for a speicific ticker.
-
-#### Parameters:
-- `ticker`: string - Stock ticker symbol
-- `topic`: string - Topic
-
-### Root (GET `/`)
-
-Root/home page of the application
-
-#### Parameters:
-No parameters
-
-
-## Class Diagrams
+MongoDB 是灵活数据存储的主要文档数据库，包括json结构嵌入和抓取内容。
+PostgreSQL 使用定义的架构处理结构化股票市场数据，以实现高效的查询和分析。
+向量数据库使用基于目录的存储来嵌入向量和相关元数据，并通过 VECTOR_DB_DIRECTORY 配置进行管理。
+阿里云对象存储服务OSS为报告、处理的数据和备份存储提供基于云的文件存储。
 
 ![Class Diagram](images/classes_stock_proj.png)
-## Images
 
-For visual representations, refer to the images in the `images/` directory.
+## Retrieve（查询检索）
 
-## Testing Framework
-The project employs the pytest framework for automated testing. This ensures that all modules are thoroughly tested to maintain reliability and robustness. Key features of the testing setup include:
-
-Comprehensive Test Cases: Test cases are written for every module, ensuring complete coverage of the application.
-Ease of Use: Simply run the following command to execute all tests:
-```bash
-pytest
+NL2SQL：
 ```
-Test Reports: The framework generates detailed reports for each test run, highlighting successes and failures.
-This testing setup ensures that the application remains stable and functional as new features are added or existing features are updated.
+自然语言查询，并将其转换为针对 PostgreSQL 数据库的可执行 SQL 查询。该系统代表了一个简化的两阶段工作流，专门关注 SQL 的生成和执行，无需额外的结果格式化。
+```
+Langraph RAG:
+Graph System 使用 LangGraph 的 StateGraph 框架实现了简化的 RAG 工作流程。
+系统使用 LangGraph 的 StateGraph 框架来编排多步骤工作流，以维护处理节点之间的状态。
+![News RAG Graph](images/news-rag-graph.png)
 
-## Observability and Tracing
-To monitor the application's performance and debug LLM-related processes, the project integrates LangSmith tracing. This enables detailed tracing of all LLM calls, providing insights into the application's execution flow.
-
-Key Features:
-LLM Call Tracing: Tracks all interactions with Large Language Models, including inputs, outputs, and execution times.
-Debugging Assistance: Helps in identifying bottlenecks or errors in LLM workflows.
-LangSmith Dashboard: Offers a user-friendly interface to visualize and analyze traces.
-How It Works:
-LangSmith tracing is seamlessly integrated into the application. All RAG workflows, including News RAG Graph, Stock Data RAG Graph, and Stock Data Charts RAG Graph, utilize LangSmith to provide actionable observability insights.
-
-
-## References
-
-- **LangGraph**: A library for building stateful, multi-actor applications with LLMs, facilitating the creation of agent and multi-agent workflows.
-- **LangChain Expression Language (LCEL)**: A declarative approach to composing chains, enabling seamless integration and optimization of complex workflows.
-
-This project exemplifies the integration of advanced AI workflows to provide insightful analyses of financial and news data, offering users a comprehensive tool for stock market evaluation.
+Rest_api：
+fastapi服务对外提供数据接口访问。
 
 
 
-(stocks) D:\stocks-insights-ai-agent-main>python -m  rag_graphs.gzh_rag_graph.ingestion
+## 使用方法
 
-(stocks) D:\stocks-insights-ai-agent-main>python -m scraper.xhs_scraper
+设置数据处理定时任务：
+在 rest_api/main.py：
+```
+scrape_in_interval(interval: int)
+run_scrapers_in_background()
+可以自行设置定时任务，
+```
+
+
+## 代码参考：
+本项目fork自： https://github.com/vinay-gatech/stocks-insights-ai-agent
+进行大量修改，适合国内使用，增加小红书，微信等大型数据平台的抓取。修改成为适合作为AI数据通用中心。可以认为就是一个简化的AI数据中心框架，目前已经整合主流的AI工具，可以根据自己的需求进行扩展。
