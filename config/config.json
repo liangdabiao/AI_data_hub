@@ -1,0 +1,15 @@
+{
+   
+
+    "SCRAPE_TICKERS": [
+        "AAPL", "MSFT", "GOOG" 
+    ],
+    "XHS_SCRAPE_TICKERS": [
+        "积木moc乐高" 
+    ],
+    "GZH_SCRAPE_TICKERS": [
+        "gh_fde65db448ac","gh_61d2357261c7","gh_d14f10312372" 
+    ],
+
+    "SCRAPING_INTERVAL": 1400
+}
