@@ -121,7 +121,9 @@ Graph System 使用 LangGraph 的 StateGraph 框架实现了简化的 RAG 工作
 Rest_api：
 fastapi服务对外提供数据接口访问。
 
-
+多模态相关图片查询检索：
+图片多模态处理和上传到向量数据库， 图片以文搜图，图搜搜 功能
+在rest_api/app.py中，实现了图片多模态处理和上传到向量数据库， 图片以文搜图，图搜搜 功能。
 
 ## 使用方法
 
