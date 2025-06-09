@@ -25,7 +25,7 @@ from utils.logger import logger
 from scraper.scraper_factory import StockScraperFactory, NewsScraperFactory,XHSScraperFactory,GZHScraperFactory
 from datetime import datetime
 
-
+# 小红书 微信公众号相关 数据处理
 
 # Load .env
 load_dotenv()
